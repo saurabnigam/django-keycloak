@@ -31,3 +31,12 @@ you to `write a proper middleware <https://docs.djangoproject.com/en/2.0/topics/
 for it. The only think the middleware has to make the correct Realm model to the
 request as `request.realm`. This middleware has to be configured above other
 middlewares which have to be configured for authentication purposes.
+
+If you want to be able to switch between realms for testing purposes, include a tag for the realm and put this tag
+in the setting KEYCLOAK_USE_REALM::
+
+    KEYCLOAK_USE_REALM = "TestRealm"
+
+
+You might want to use this where you have a test client point to your dev server and you also have a production client
+and you are switching between them.

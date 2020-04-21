@@ -32,11 +32,14 @@ class Realm(models.Model):
 
     server = models.ForeignKey(Server, related_name='realms',
                                on_delete=models.CASCADE)
-
-    name = models.CharField(max_length=255, unique=True,
+    name = models.CharField(max_length=255,
                             help_text='Name as known on the Keycloak server. '
                                       'This name is used in the API paths '
                                       'of this Realm.')
+
+    tag = models.CharField(max_length=255, null=True,
+                           help_text='use if you want to select between multiple instances of the same realm')
+
     _certs = models.TextField()
 
     @property

@@ -1,4 +1,5 @@
 from keycloak.realm import KeycloakRealm
+from keycloak.exceptions import KeycloakClientError
 
 try:
     from urllib.parse import urlparse
@@ -62,11 +63,18 @@ def get_issuer(realm):
     Get correct issuer to validate the JWT against. If an internal URL is
     configured for the server it will be replaced with the public one.
 
+    If the realm has not be setup, raise an error
+
     :param django_keycloak.models.Realm realm:
     :return: issuer
     :rtype: str
     """
-    issuer = realm.well_known_oidc['issuer']
+    try:
+        issuer = realm.well_known_oidc['issuer']
+    except Exception as e:
+        raise KeycloakClientError(
+            "Error %s getting issuer.  Check Realm and Client correctly set up.  Run= Refresh OpenID Connect .well-known and Refresh Certificates run in admin" % e)
+
     if realm.server.internal_url:
         return issuer.replace(realm.server.internal_url, realm.server.url, 1)
     return issuer

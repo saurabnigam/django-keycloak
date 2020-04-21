@@ -156,3 +156,4 @@ class ServicesOpenIDProfileGetOrCreateFromIdTokenTestCase(
         self.assertEqual(profile.user.email, 'test@example.com')
         self.assertEqual(profile.user.first_name, 'Some given name')
         self.assertEqual(profile.user.last_name, 'Some family name')
+

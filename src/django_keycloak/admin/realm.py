@@ -144,7 +144,7 @@ class RealmAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (None, {
-            'fields': ('name',)
+            'fields': ('name', 'tag')
         }),
         ('Location', {
             'fields': ('server', '_well_known_oidc',)

@@ -67,3 +67,5 @@ class ServicesKeycloakOpenIDProfileGetActiveAccessTokenTestCase(
         self.assertEqual(self.oidc_profile.refresh_token, 'new-refresh-token')
         self.assertEqual(self.oidc_profile.refresh_expires_before,
                          datetime(2018, 3, 5, 2, 1, 0))
+
+
