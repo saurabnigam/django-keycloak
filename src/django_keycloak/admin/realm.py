@@ -133,7 +133,7 @@ class RemoteClientAdmin(admin.TabularInline):
 class RealmAdmin(admin.ModelAdmin):
 
     inlines = [ClientAdmin, RemoteClientAdmin]
-
+    list_display = ('name','tag')
     actions = [
         refresh_open_id_connect_well_known,
         refresh_certs,
