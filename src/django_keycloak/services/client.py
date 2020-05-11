@@ -101,12 +101,15 @@ def get_new_access_token(client):
     :param django_keycloak.models.Client client:
     :rtype: str
     """
-    scope = 'realm-management openid'
+    # removed scope as no longer supported in keycloak
+    # scope = 'realm-management openid'
 
     initiate_time = timezone.now()
-    token_response = client.openid_api_client.client_credentials(scope=scope)
+    # token_response = client.openid_api_client.client_credentials(scope=scope)
+    token_response = client.openid_api_client.client_credentials()
 
     return token_response, initiate_time
+
 
 
 def get_access_token(client):
