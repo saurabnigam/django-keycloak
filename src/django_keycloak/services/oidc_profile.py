@@ -19,6 +19,9 @@ import django_keycloak.services.realm
 
 logger = logging.getLogger(__name__)
 
+'''
+.oidc_profile.jwt
+'''
 
 def get_openid_connect_profile_model():
     """
@@ -99,17 +102,24 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
 
         return oidc_profile
 
+
     with transaction.atomic():
         UserModel = get_user_model()
-        email_field_name = UserModel.get_email_field_name()
-        user, _ = UserModel.objects.update_or_create(
-            username=id_token_object['sub'],
-            defaults={
-                email_field_name: id_token_object.get('email', ''),
-                'first_name': id_token_object.get('given_name', ''),
-                'last_name': id_token_object.get('family_name', '')
-            }
-        )
+
+        if hasattr(UserModel, "update_or_create_from_token"):
+            UserModel.update_or_create_from_token(id_token_object)
+        else:
+            email_field_name = UserModel.get_email_field_name()
+            user, _ = UserModel.objects.update_or_create(
+                username=id_token_object['sub'],
+                defaults={
+                    email_field_name: id_token_object.get('email', ''),
+                    'first_name': id_token_object.get('given_name', ''),
+                    'last_name': id_token_object.get('family_name', '')
+                }
+            )
+
+
 
         oidc_profile, _ = OpenIdConnectProfileModel.objects.update_or_create(
             sub=id_token_object['sub'],
@@ -120,6 +130,7 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
         )
 
     return oidc_profile
+
 
 
 def get_remote_user_from_profile(oidc_profile):

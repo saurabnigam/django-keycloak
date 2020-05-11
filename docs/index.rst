@@ -95,6 +95,41 @@ Keycloak instance to your Django project.
 
 If you don't want to take all that effort please read about :ref:`example_project`
 
+Customisation
+=============
+
+If there are additional user attributes being passed in the access token that should update the user instance, add a new method to the user called update_or_create_from_token.  If this method exists it will automatically be called and passed the token.  Example::
+
+    @classmethod
+    def update_or_create_from_token(cls, token):
+
+        # get or create user
+        username = token['sub']
+        try:
+            user = cls.objects.get(username=username)
+        except cls.DoesNotExist:
+            user = cls.objects.create_user(username=username, email=token['email'])
+
+        # see if we need to update
+
+        # if we have org groups, assume they are organisations this user belongs to.
+        # for now we are only handling one organisation per user
+        org_groups = [item for item in token['groups'] if item[:4] == "/org"]
+        org_codes = [code.split("/")[2] for code in org_groups]
+        org_code = org_codes[0] if org_codes else None
+
+
+        if user.first_name != token.get('given_name', '') or \
+            user.last_name != token.get('family_name', '') or \
+            user.organisation_id != org_code:
+
+            user.first_name = token.get('given_name', '')
+            user.last_name = token.get('family_name', '')
+            user.organisation_id = org_code
+
+            user.save(update_fields=['first_name', 'last_name', 'organisation_id'])
+
+
 Usage
 =====
 
