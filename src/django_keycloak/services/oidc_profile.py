@@ -107,7 +107,7 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
         UserModel = get_user_model()
 
         if hasattr(UserModel, "update_or_create_from_token"):
-            UserModel.update_or_create_from_token(id_token_object)
+            user = UserModel.update_or_create_from_token(id_token_object)
         else:
             email_field_name = UserModel.get_email_field_name()
             user, _ = UserModel.objects.update_or_create(
