@@ -98,10 +98,17 @@ class LoginComplete(RedirectView):
 class Logout(RedirectView):
 
     def get_redirect_url(self, *args, **kwargs):
+
+
         if hasattr(self.request.user, 'oidc_profile'):
-            self.request.realm.client.openid_api_client.logout(
-                self.request.user.oidc_profile.refresh_token
-            )
+            #NOTE: getting error invalid refresh token
+            try:
+                self.request.realm.client.openid_api_client.logout(
+                    self.request.user.oidc_profile.refresh_token
+                )
+            except Exception as e:
+                logger.error(f"Error logging out user and getting refresh token: {e}")
+
             self.request.user.oidc_profile.access_token = None
             self.request.user.oidc_profile.expires_before = None
             self.request.user.oidc_profile.refresh_token = None
@@ -112,6 +119,7 @@ class Logout(RedirectView):
                 'refresh_token',
                 'refresh_expires_before'
             ])
+
 
         logout(self.request)
 

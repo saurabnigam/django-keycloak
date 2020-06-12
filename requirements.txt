@@ -1,0 +1,8 @@
+pytest-runner
+python-keycloak-client
+Django==2.2.12
+pytest-django
+pytest-cov
+mock>=2.0
+factory-boy
+freezegun
