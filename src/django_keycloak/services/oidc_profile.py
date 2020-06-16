@@ -106,18 +106,29 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
     with transaction.atomic():
         UserModel = get_user_model()
 
+
+
         if hasattr(UserModel, "update_or_create_from_token"):
             user = UserModel.update_or_create_from_token(id_token_object)
         else:
             email_field_name = UserModel.get_email_field_name()
-            user, _ = UserModel.objects.update_or_create(
-                username=id_token_object['sub'],
-                defaults={
-                    email_field_name: id_token_object.get('email', ''),
-                    'first_name': id_token_object.get('given_name', ''),
-                    'last_name': id_token_object.get('family_name', '')
-                }
-            )
+
+            # handle scenario where user may already exist but not have used keycloak to login before
+            # look for existing email first
+
+            try:
+                user = UserModel.objects.get(email = id_token_object.get('email'))
+                user.username = id_token_object['sub']
+                user.save()
+            except:
+                user, _ = UserModel.objects.update_or_create(
+                    username=id_token_object['sub'],
+                    defaults={
+                        email_field_name: id_token_object.get('email', ''),
+                        'first_name': id_token_object.get('given_name', ''),
+                        'last_name': id_token_object.get('family_name', '')
+                    }
+                )
 
 
 
