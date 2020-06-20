@@ -189,12 +189,8 @@ class KeycloakDRFAuthorizationBackend(KeycloakAuthorizationBase):
             msg = _('Invalid key for Authorization, expecting Bearer')
             raise PermissionDenied(msg)
 
-        elif len(token) != 1:
+        elif len(token) < 10 or len(token) > 2000:
             msg = _('Invalid token header.')
-            raise PermissionDenied(msg)
-
-        if not token.is_alphanum():
-            msg = _('Invalid token header. Token string contains invalid characters.')
             raise PermissionDenied(msg)
 
 
