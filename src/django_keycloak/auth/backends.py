@@ -2,7 +2,7 @@ import logging
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ImproperlyConfigured
+from django.core.exceptions import ImproperlyConfigured, PermissionDenied
 from django.utils import timezone
 from jose.exceptions import (
     ExpiredSignatureError,
@@ -10,7 +10,7 @@ from jose.exceptions import (
     JWTError,
 )
 from keycloak.exceptions import KeycloakClientError
-
+from django.utils.translation import ugettext_lazy as _
 import django_keycloak.services.oidc_profile
 
 
@@ -166,5 +166,100 @@ class KeycloakIDTokenAuthorizationBackend(KeycloakAuthorizationBase):
                          'authenticate due to a malformed access token.')
         else:
             return oidc_profile.user
+
+        return None
+
+
+class KeycloakAccessTokenAuthorizationBackend(KeycloakAuthorizationBase):
+
+    def authenticate(self, request, access_token):
+
+        if not hasattr(request, 'realm'):
+            raise ImproperlyConfigured(
+                'Add BaseKeycloakMiddleware to middlewares')
+
+        try:
+            oidc_profile = django_keycloak.services.oidc_profile\
+                .get_or_create_from_id_token(
+                    client=request.realm.client,
+                    id_token=access_token
+                )
+        except ExpiredSignatureError:
+            # If the signature has expired.
+            logger.debug('KeycloakBearerAuthorizationBackend: failed to '
+                         'authenticate due to an expired access token.')
+        except JWTClaimsError as e:
+            logger.debug('KeycloakBearerAuthorizationBackend: failed to '
+                         'authenticate due to failing claim checks: "%s"'
+                         % str(e))
+        except JWTError:
+            # The signature is invalid in any way.
+            logger.debug('KeycloakBearerAuthorizationBackend: failed to '
+                         'authenticate due to a malformed access token.')
+        else:
+            return oidc_profile.user
+
+        return None
+
+class KeycloakDRFAuthorizationBackend(KeycloakAuthorizationBase):
+    keyword = "bearer"
+
+    def authenticate(self, request):
+
+        auth = request.headers.get('Authorization').split()
+        provided_origin = request.headers.get('Origin')
+
+
+        if not auth:
+            return None
+
+        elif auth[0].lower() != self.keyword.lower():
+            msg = _('Invalid key for Authorization, expecting Bearer')
+            raise PermissionDenied(msg)
+
+        elif len(auth) == 1:
+            msg = _('Invalid token header. No credentials provided.')
+            raise PermissionDenied(msg)
+        elif len(auth) > 2:
+            msg = _('Invalid token header. Token string should not contain spaces.')
+            raise PermissionDenied(msg)
+
+        try:
+            token = auth[1]
+        except UnicodeError:
+            msg = _('Invalid token header. Token string should not contain invalid characters.')
+            raise PermissionDenied(msg)
+
+
+        if not hasattr(request, 'realm'):
+            raise ImproperlyConfigured(
+                'Add BaseKeycloakMiddleware to middlewares')
+
+        try:
+            oidc_profile = django_keycloak.services.oidc_profile\
+                .get_or_create_from_id_token(
+                    client=request.realm.client,
+                    id_token=token
+                )
+        except ExpiredSignatureError:
+            # If the signature has expired.
+            msg = _('KeycloakBearerAuthorizationBackend: failed to '
+                         'authenticate due to an expired access token.')
+            raise PermissionDenied(msg)
+        except JWTClaimsError as e:
+            msg = _('KeycloakBearerAuthorizationBackend: failed to '
+                         'authenticate due to failing claim checks: "%s"'
+                         % str(e))
+            raise PermissionDenied(msg)
+        except JWTError:
+            # The signature is invalid in any way.
+            msg = _('KeycloakBearerAuthorizationBackend: failed to '
+                         'authenticate due to a malformed access token.')
+            raise PermissionDenied(msg)
+        except Exception as e:
+            msg = _(f'Unexpected error in authentication {e}')
+            raise PermissionDenied(msg)
+        else:
+            return (oidc_profile.user, None)
 
         return None
