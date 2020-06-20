@@ -175,28 +175,26 @@ class KeycloakDRFAuthorizationBackend(KeycloakAuthorizationBase):
 
     def authenticate(self, request):
 
-        auth = request.headers.get('Authorization').split()
+        auth = request.headers.get('Authorization')
         provided_origin = request.headers.get('Origin')
 
 
         if not auth:
             return None
 
-        elif auth[0].lower() != self.keyword.lower():
+
+        key, token = auth.split()
+
+        if key.lower() != self.keyword.lower():
             msg = _('Invalid key for Authorization, expecting Bearer')
             raise PermissionDenied(msg)
 
-        elif len(auth) == 1:
-            msg = _('Invalid token header. No credentials provided.')
-            raise PermissionDenied(msg)
-        elif len(auth) > 2:
-            msg = _('Invalid token header. Token string should not contain spaces.')
+        elif len(token) != 1:
+            msg = _('Invalid token header.')
             raise PermissionDenied(msg)
 
-        try:
-            token = auth[1]
-        except UnicodeError:
-            msg = _('Invalid token header. Token string should not contain invalid characters.')
+        if not token.is_alphanum():
+            msg = _('Invalid token header. Token string contains invalid characters.')
             raise PermissionDenied(msg)
 
 
