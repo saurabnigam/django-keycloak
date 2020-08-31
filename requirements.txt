@@ -1,5 +1,5 @@
 pytest-runner
-python-keycloak-client
+python-keycloak-client==0.2.2
 Django==2.2.12
 pytest-django
 pytest-cov
