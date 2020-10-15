@@ -62,6 +62,14 @@ class Login(RedirectView):
         return authorization_url
 
 
+class Register(Login):
+
+    def get_redirect_url(self, *args, **kwargs):
+
+        authorization_url = super().get_redirect_url(*args, **kwargs)
+
+        return authorization_url.replace("/auth?", "/registrations?")
+
 class LoginComplete(RedirectView):
 
     def get(self, *args, **kwargs):
