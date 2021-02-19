@@ -1,8 +1,8 @@
 pytest-runner
-python-keycloak-client==0.2.2
-Django==2.2.12
+python-keycloak-client
+Django>=3.1
 pytest-django
 pytest-cov
 mock>=2.0
-factory-boy
+factory-boy>=3.2
 freezegun
