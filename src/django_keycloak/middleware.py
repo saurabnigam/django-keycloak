@@ -50,7 +50,10 @@ class BaseKeycloakMiddleware(MiddlewareMixin):
         return response
 
     def set_session_state_cookie_(self, request, response):
-
+        
+        if not request.user:
+            return response
+        
         if not request.user.is_authenticated \
                 or not hasattr(request.user, 'oidc_profile'):
             return response
