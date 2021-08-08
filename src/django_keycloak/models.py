@@ -262,10 +262,6 @@ class OpenIdConnectProfile(OpenIdConnectProfileAbstract):
 
     is_remote = False
 
-    user = models.OneToOneField(settings.AUTH_USER_MODEL,
-                                related_name='oidc_profile',
-                                on_delete=models.CASCADE)
-
     class Meta(RemoteUserOpenIdConnectProfile.Meta):
         swappable = 'KEYCLOAK_OIDC_PROFILE_MODEL'
 
