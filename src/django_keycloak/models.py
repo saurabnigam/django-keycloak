@@ -170,8 +170,47 @@ class OpenIdConnectProfileAbstract(TokenModelAbstract):
                               related_name='openid_profiles',
                               on_delete=models.CASCADE)
 
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+                                related_name='oidc_profile',
+                                on_delete=models.CASCADE)
+
     class Meta(object):
-        abstract = True
+        db_table = 'django_keycloak_openidconnectprofile'
+
+    @property
+    def jwt(self):
+        """
+        :rtype: dict
+        """
+        if not self.is_active:
+            return None
+        client = self.realm.client
+        return client.openid_api_client.decode_token(
+            token=self.access_token,
+            key=client.realm.certs,
+            algorithms=client.openid_api_client.well_known[
+                'id_token_signing_alg_values_supported']
+        )
+
+
+class RemoteUserOpenIdConnectProfile(TokenModelAbstract):
+
+    sub = models.CharField(max_length=255, unique=True)
+
+    realm = models.ForeignKey('django_keycloak.Realm',
+                              related_name='openid_profiles',
+                              on_delete=models.CASCADE)
+
+    class Meta(object):
+        db_table = 'django_keycloak_openidconnectprofile'
+
+    @cached_property
+    def user(self):
+        import django_keycloak.services.oidc_profile
+        return django_keycloak.services.oidc_profile. \
+            get_remote_user_from_profile(
+                oidc_profile=self
+            )
 
     @property
     def jwt(self):
@@ -241,7 +280,9 @@ class Nonce(models.Model):
 class ExchangedToken(TokenModelAbstract):
 
     oidc_profile = models.ForeignKey(
-        settings.KEYCLOAK_OIDC_PROFILE_MODEL,
+        'django_keycloak.OpenIdConnectProfile'
+        if not getattr(settings, 'AUTH_ENABLE_REMOTE_USER', False)
+        else 'django_keycloak.RemoteUserOpenIdConnectProfile',
         on_delete=models.CASCADE
     )
     remote_client = models.ForeignKey('django_keycloak.RemoteClient',
