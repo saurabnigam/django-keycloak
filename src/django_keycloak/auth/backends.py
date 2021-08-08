@@ -10,7 +10,6 @@ from jose.exceptions import (
     JWTError,
 )
 from keycloak.exceptions import KeycloakClientError
-from django.utils.translation import ugettext_lazy as _
 import django_keycloak.services.oidc_profile
 
 
@@ -28,7 +27,7 @@ class KeycloakAuthorizationBase(object):
         except UserModel.DoesNotExist:
             return None
 
-        if user.oidc_profile.refresh_expires_before and user.oidc_profile.refresh_expires_before > timezone.now():
+        if user.get_profile().refresh_expires_before > timezone.now():
             return user
 
         return None
@@ -48,47 +47,30 @@ class KeycloakAuthorizationBase(object):
         rpt_decoded = django_keycloak.services.oidc_profile\
             .get_entitlement(oidc_profile=user_obj.oidc_profile)
 
-        if settings.KEYCLOAK_PERMISSIONS_METHOD == 'role':
-            return [
-                role for role in rpt_decoded['resource_access'].get(
-                    user_obj.oidc_profile.realm.client.client_id,
-                    {'roles': []}
-                )['roles']
-            ]
-        elif settings.KEYCLOAK_PERMISSIONS_METHOD == 'resource':
-            permissions = []
-            for p in rpt_decoded['authorization'].get('permissions', []):
-                if 'scopes' in p:
-                    for scope in p['scopes']:
-                        if '.' in p['resource_set_name']:
-                            app, model = p['resource_set_name'].split('.', 1)
-                            permissions.append('{app}.{scope}_{model}'.format(
-                                app=app,
-                                scope=scope,
-                                model=model
-                            ))
-                        else:
-                            permissions.append('{scope}_{resource}'.format(
-                                scope=scope,
-                                resource=p['resource_set_name']
-                            ))
-                else:
-                    permissions.append(p['resource_set_name'])
-
-            return permissions
-        else:
-            raise ImproperlyConfigured(
-                'Unsupported permission method configured for '
-                'Keycloak: {}'.format(settings.KEYCLOAK_PERMISSIONS_METHOD)
-            )
+        return rpt_decoded['authorization'].get('permissions', [])
 
     def has_perm(self, user_obj, perm, obj=None):
+        if '.' in perm:
+            # Permission is formatted as <resource>.<scope>
+            # Split the permission into separate resource and scope
+            resource, scope = perm.split('.', 1)
+        else:
+            # Permission is only a resource
+            # Can't split
+            resource = perm
+            scope = ''
 
-        if not user_obj.is_active:
-            return False
-
-        granted_perms = self.get_all_permissions(user_obj, obj)
         return perm in granted_perms
+
+        for p in granted_perms:
+            if p['resource_set_name'] == resource and not p.get('scopes'):
+                return True
+
+            if p['resource_set_name'] == resource \
+                    and scope in p.get('scopes', {}):
+                return True
+
+        return False
 
 
 class KeycloakAuthorizationCodeBackend(KeycloakAuthorizationBase):

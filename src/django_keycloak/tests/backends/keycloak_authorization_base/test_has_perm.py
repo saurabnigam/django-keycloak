@@ -1,37 +1,33 @@
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
 from django_keycloak.factories import OpenIdConnectProfileFactory
 from django_keycloak.tests.mixins import MockTestCaseMixin
 from django_keycloak.auth.backends import KeycloakAuthorizationBase
 
 
-@override_settings(KEYCLOAK_PERMISSIONS_METHOD='resource')
 class BackendsKeycloakAuthorizationBaseHasPermTestCase(
         MockTestCaseMixin, TestCase):
 
     def setUp(self):
         self.backend = KeycloakAuthorizationBase()
 
-        self.profile = OpenIdConnectProfileFactory(user__is_active=True)
+        self.profile = OpenIdConnectProfileFactory()
 
         self.setup_mock(
-            'django_keycloak.services.oidc_profile.get_entitlement',
-            return_value={
-                'authorization': {
-                    'permissions': [
-                        {
-                            'resource_set_name': 'Resource',
-                            'scopes': [
-                                'Read',
-                                'Update'
-                            ]
-                        },
-                        {
-                            'resource_set_name': 'Resource2'
-                        }
+            'django_keycloak.auth.backends.KeycloakAuthorizationBase.'
+            'get_all_permissions',
+            return_value=[
+                {
+                    'resource_set_name': 'Resource',
+                    'scopes': [
+                        'Read',
+                        'Update'
                     ]
+                },
+                {
+                    'resource_set_name': 'Resource2'
                 }
-            }
+            ]
         )
 
     def test_resource_scope_should_have_permission(self):
@@ -40,7 +36,7 @@ class BackendsKeycloakAuthorizationBaseHasPermTestCase(
         Expected: Permission granted.
         """
         permission = self.backend.has_perm(
-            user_obj=self.profile.user, perm='Read_Resource')
+            user_obj=self.profile.user, perm='Resource.Read')
 
         self.assertTrue(permission)
 
@@ -62,7 +58,7 @@ class BackendsKeycloakAuthorizationBaseHasPermTestCase(
         Expected: Permission denied.
         """
         permission = self.backend.has_perm(
-            user_obj=self.profile.user, perm='Create_Resource')
+            user_obj=self.profile.user, perm='Resource.Create')
 
         self.assertFalse(permission)
 
@@ -73,7 +69,7 @@ class BackendsKeycloakAuthorizationBaseHasPermTestCase(
         Expected: Permission denied.
         """
         permission = self.backend.has_perm(
-            user_obj=self.profile.user, perm='OtherScope_OtherResource')
+            user_obj=self.profile.user, perm='OtherResource.OtherScope')
 
         self.assertFalse(permission)
 

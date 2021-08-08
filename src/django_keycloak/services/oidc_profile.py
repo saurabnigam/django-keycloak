@@ -2,7 +2,6 @@ from datetime import timedelta
 
 import logging
 
-from django.apps import apps as django_apps
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 from django.contrib.auth import get_user_model
@@ -11,6 +10,8 @@ from django.utils import timezone
 from django.utils.module_loading import import_string
 from keycloak.exceptions import KeycloakClientError
 
+from django_keycloak.models import RemoteUserOpenIdConnectProfile, \
+    OpenIdConnectProfile
 from django_keycloak.services.exceptions import TokensExpired
 from django_keycloak.remote_user import KeycloakRemoteUser
 
@@ -56,6 +57,22 @@ def get_remote_user_model():
         )
 
 
+def get_remote_user_model():
+    """
+    Return the User model that is active in this project.
+    """
+    if not hasattr(settings, 'AUTH_REMOTE_USER_MODEL'):
+        # By default return the standard KeycloakRemoteUser model
+        return KeycloakRemoteUser
+
+    try:
+        return import_string(settings.AUTH_REMOTE_USER_MODEL)
+    except ImportError:
+        raise ImproperlyConfigured(
+            "AUTH_REMOTE_USER_MODEL refers to non-existing class"
+        )
+
+
 def get_or_create_from_id_token(client, id_token):
     """
     Get or create OpenID Connect profile from given id_token.
@@ -86,10 +103,9 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
     :return:
     """
 
-    OpenIdConnectProfileModel = get_openid_connect_profile_model()
 
-    if OpenIdConnectProfileModel.is_remote:
-        oidc_profile, _ = OpenIdConnectProfileModel.objects.\
+    if getattr(settings, 'AUTH_ENABLE_REMOTE_USER', False):
+        oidc_profile, _ = RemoteUserOpenIdConnectProfile.objects.\
             update_or_create(
                 sub=id_token_object['sub'],
                 defaults={
@@ -97,11 +113,8 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
                 }
             )
 
-        UserModel = get_remote_user_model()
-        oidc_profile.user = UserModel(id_token_object)
 
         return oidc_profile
-
 
     with transaction.atomic():
         UserModel = get_user_model()
@@ -143,7 +156,6 @@ def update_or_create_user_and_oidc_profile(client, id_token_object):
     return oidc_profile
 
 
-
 def get_remote_user_from_profile(oidc_profile):
     """
 
@@ -158,7 +170,7 @@ def get_remote_user_from_profile(oidc_profile):
     except KeycloakClientError:
         return None
 
-    # Get the user from the KEYCLOAK_REMOTE_USER_MODEL in the settings
+    # Get the user from the AUTH_REMOTE_USER_MODEL in the settings
     UserModel = get_remote_user_model()
 
     # Create the object of type UserModel from the constructor of it's class

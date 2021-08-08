@@ -20,12 +20,8 @@ def get_realm(request):
     return request._cached_realm
 
 
-def get_user(request, origin_user):
-    # Check for the user as set by
-    # django.contrib.auth.middleware.AuthenticationMiddleware
-    if not isinstance(origin_user, AnonymousUser):
-        return origin_user
 
+def get_user(request):
     if not hasattr(request, '_cached_user'):
         request._cached_user = get_remote_user(request)
     return request._cached_user
@@ -58,7 +54,7 @@ class BaseKeycloakMiddleware(MiddlewareMixin):
                 or not hasattr(request.user, 'oidc_profile'):
             return response
 
-        jwt = request.user.oidc_profile.jwt
+        jwt = request.user.get_profile().jwt
         if not jwt:
             return response
 
@@ -69,7 +65,7 @@ class BaseKeycloakMiddleware(MiddlewareMixin):
         # expires.
         response.set_cookie(
             cookie_name, value=jwt['session_state'],
-            expires=request.user.oidc_profile.refresh_expires_before,
+            expires=request.user.get_profile().refresh_expires_before,
             httponly=False
         )
 
@@ -120,9 +116,5 @@ class RemoteUserAuthenticationMiddleware(MiddlewareMixin):
         Adds user to the request when authorized user is found in the session
         :param django.http.request.HttpRequest request: django request
         """
-        origin_user = getattr(request, 'user', None)
 
-        request.user = SimpleLazyObject(lambda: get_user(
-            request,
-            origin_user=origin_user
-        ))
+        request.user = SimpleLazyObject(lambda: get_user(request))

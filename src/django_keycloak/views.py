@@ -92,8 +92,7 @@ class LoginComplete(RedirectView):
                             code=request.GET['code'],
                             redirect_uri=nonce.redirect_uri)
 
-        RemoteUserModel = get_remote_user_model()
-        if isinstance(user, RemoteUserModel):
+        if getattr(settings, 'AUTH_ENABLE_REMOTE_USER', False):
             remote_user_login(request, user)
         else:
             login(request, user)
@@ -109,14 +108,9 @@ class Logout(RedirectView):
 
 
         if hasattr(self.request.user, 'oidc_profile'):
-            #NOTE: getting error invalid refresh token
-            try:
-                self.request.realm.client.openid_api_client.logout(
-                    self.request.user.oidc_profile.refresh_token
-                )
-            except Exception as e:
-                logger.error(f"Error logging out user and getting refresh token: {e}")
-
+            self.request.realm.client.openid_api_client.logout(
+                self.request.user.get_profile().refresh_token
+            )
             self.request.user.oidc_profile.access_token = None
             self.request.user.oidc_profile.expires_before = None
             self.request.user.oidc_profile.refresh_token = None
