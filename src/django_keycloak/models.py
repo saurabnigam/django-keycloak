@@ -170,9 +170,6 @@ class OpenIdConnectProfileAbstract(TokenModelAbstract):
                               related_name='openid_profiles',
                               on_delete=models.CASCADE)
 
-    user = models.OneToOneField(settings.AUTH_USER_MODEL,
-                                related_name='oidc_profile',
-                                on_delete=models.CASCADE)
 
     class Meta(object):
         db_table = 'django_keycloak_openidconnectprofile'
@@ -233,6 +230,10 @@ class RemoteUserOpenIdConnectProfile(OpenIdConnectProfileAbstract):
     is_remote = True
     _user = None
 
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+                                related_name='oidc_profile',
+                                on_delete=models.CASCADE)
+
     class Meta(OpenIdConnectProfileAbstract.Meta):
         swappable = 'KEYCLOAK_OIDC_PROFILE_MODEL'
 
@@ -261,6 +262,10 @@ class RemoteUserOpenIdConnectProfile(OpenIdConnectProfileAbstract):
 class OpenIdConnectProfile(OpenIdConnectProfileAbstract):
 
     is_remote = False
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+                                related_name='oidc_profile',
+                                on_delete=models.CASCADE)
 
     class Meta(RemoteUserOpenIdConnectProfile.Meta):
         swappable = 'KEYCLOAK_OIDC_PROFILE_MODEL'
